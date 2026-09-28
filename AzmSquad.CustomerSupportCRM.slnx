@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/CustomerSupportCRM.Api/CustomerSupportCRM.Api.csproj" />
+    <Project Path="src/CustomerSupportCRM.Application/CustomerSupportCRM.Application.csproj" />
+    <Project Path="src/CustomerSupportCRM.Domain/CustomerSupportCRM.Domain.csproj" />
+    <Project Path="src/CustomerSupportCRM.Infrastructure/CustomerSupportCRM.Infrastructure.csproj" />
+    <Project Path="src/CustomerSupportCRM.Web/CustomerSupportCRM.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/CustomerSupportCRM.Api.Tests/CustomerSupportCRM.Api.Tests.csproj" />
+    <Project Path="tests/CustomerSupportCRM.Application.Tests/CustomerSupportCRM.Application.Tests.csproj" />
+  </Folder>
+</Solution>
