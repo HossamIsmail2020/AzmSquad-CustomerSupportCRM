@@ -2,6 +2,7 @@ using CustomerSupportCRM.Application.Auth;
 using CustomerSupportCRM.Application.Customers;
 using CustomerSupportCRM.Application.Dashboard;
 using CustomerSupportCRM.Application.Tickets;
+using CustomerSupportCRM.Application.Users;
 using CustomerSupportCRM.Infrastructure.Auth;
 using CustomerSupportCRM.Infrastructure.Identity;
 using CustomerSupportCRM.Infrastructure.Persistence;
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserDirectoryService, UserDirectoryService>();
 
         return services;
     }
