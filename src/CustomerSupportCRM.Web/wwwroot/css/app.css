@@ -113,3 +113,49 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+.login-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f5f5f5;
+}
+
+.login-card {
+    background: #fff;
+    padding: 2rem 2.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 380px;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.badge-status {
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: #fff;
+}
+
+.status-Open { background: #6c757d; }
+.status-InProgress { background: #0d6efd; }
+.status-Waiting { background: #fd7e14; }
+.status-Resolved { background: #198754; }
+.status-Closed { background: #343a40; }
+
+.priority-Low { color: #6c757d; }
+.priority-Medium { color: #0d6efd; }
+.priority-High { color: #fd7e14; }
+.priority-Urgent { color: #dc3545; font-weight: bold; }
+
+.field-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+}

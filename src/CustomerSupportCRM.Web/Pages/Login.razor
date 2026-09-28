@@ -1,0 +1,78 @@
+@page "/login"
+@layout LoginLayout
+@inject ApiClient Api
+@inject JwtAuthenticationStateProvider AuthProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Log in</PageTitle>
+
+<div class="login-card">
+    <h1>Customer Support CRM</h1>
+
+    <EditForm Model="_model" OnValidSubmit="SubmitAsync">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label class="form-label" for="email">Email</label>
+            <InputText id="email" class="form-control" @bind-Value="_model.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <InputText id="password" type="password" class="form-control" @bind-Value="_model.Password" />
+        </div>
+
+        @if (_errorMessage is not null)
+        {
+            <div class="alert alert-danger">@_errorMessage</div>
+        }
+
+        <button class="btn btn-primary" type="submit" disabled="@_isSubmitting">
+            @(_isSubmitting ? "Signing in..." : "Sign in")
+        </button>
+    </EditForm>
+
+    <p class="mt-3 text-muted small">
+        Seeded accounts: admin@azmsquad.dev / agent@azmsquad.dev, password Passw0rd!
+    </p>
+</div>
+
+@code {
+    private readonly LoginFormModel _model = new();
+    private string? _errorMessage;
+    private bool _isSubmitting;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private async Task SubmitAsync()
+    {
+        _isSubmitting = true;
+        _errorMessage = null;
+
+        try
+        {
+            var response = await Api.LoginAsync(new LoginRequest(_model.Email, _model.Password));
+            await AuthProvider.NotifyUserAuthenticationAsync(response.Token);
+            Navigation.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "/" : ReturnUrl);
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private class LoginFormModel
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.EmailAddress]
+        public string Email { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Password { get; set; } = string.Empty;
+    }
+}

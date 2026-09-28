@@ -1,0 +1,171 @@
+@page "/tickets/{Id:guid}"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Ticket</PageTitle>
+
+@if (_loading)
+{
+    <p>Loading...</p>
+}
+else if (_ticket is null)
+{
+    <p class="text-danger">Ticket not found.</p>
+}
+else
+{
+    <div class="page-header">
+        <h1>@_ticket.Subject</h1>
+        <span class="badge-status status-@_ticket.Status">@_ticket.Status</span>
+    </div>
+
+    <p><strong>Customer:</strong> @_ticket.CustomerName (@_ticket.CustomerEmail)</p>
+    <p><strong>Category:</strong> @_ticket.Category &nbsp; <strong>Priority:</strong> <span class="priority-@_ticket.Priority">@_ticket.Priority</span></p>
+    <p><strong>Assigned to:</strong> @(_ticket.AssignedAgentName ?? "Unassigned")</p>
+    <p>@_ticket.Description</p>
+
+    @if (_errorMessage is not null)
+    {
+        <div class="alert alert-danger">@_errorMessage</div>
+    }
+
+    <div class="card p-3 mb-3">
+        <h5>Change status</h5>
+        <div class="d-flex gap-2 align-items-center">
+            <select class="form-select" style="max-width:200px" @bind="_selectedStatus">
+                @foreach (var status in Enum.GetValues<TicketStatus>())
+                {
+                    <option value="@status">@status</option>
+                }
+            </select>
+            <button class="btn btn-primary" @onclick="ChangeStatusAsync">Update</button>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-3">
+        <h5>Assign</h5>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <select class="form-select" style="max-width:260px" @bind="_selectedAgentId">
+                <option value="">Select an agent</option>
+                @foreach (var agent in _agents)
+                {
+                    <option value="@agent.Id">@agent.FullName</option>
+                }
+            </select>
+            <button class="btn btn-primary" @onclick="AssignAsync">Assign</button>
+            @if (_currentUserId is not null)
+            {
+                <button class="btn btn-outline-secondary" @onclick="AssignToSelfAsync">Assign to me</button>
+            }
+        </div>
+    </div>
+
+    <div class="card p-3">
+        <h5>Activity</h5>
+        @if (_activity.Count == 0)
+        {
+            <p class="text-muted">No activity yet.</p>
+        }
+        else
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var entry in _activity)
+                {
+                    <li class="list-group-item">
+                        <strong>@entry.Type</strong> by @entry.CreatedByName
+                        on @entry.CreatedAt.ToLocalTime().ToString("g")
+                        <div class="text-muted">@entry.Description</div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private TicketDto? _ticket;
+    private List<TicketActivityDto> _activity = [];
+    private List<AgentSummaryDto> _agents = [];
+    private bool _loading = true;
+    private string? _errorMessage;
+    private TicketStatus _selectedStatus;
+    private string _selectedAgentId = string.Empty;
+    private string? _currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthState.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var ticketTask = Api.GetTicketAsync(Id);
+            var activityTask = Api.GetTicketActivityAsync(Id);
+            var agentsTask = Api.GetAgentsAsync();
+            await Task.WhenAll(ticketTask, activityTask, agentsTask);
+
+            _ticket = ticketTask.Result;
+            _activity = activityTask.Result.ToList();
+            _agents = agentsTask.Result.ToList();
+            _selectedStatus = _ticket.Status;
+        }
+        catch (ApiException)
+        {
+            _ticket = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ChangeStatusAsync()
+    {
+        _errorMessage = null;
+        try
+        {
+            await Api.ChangeTicketStatusAsync(Id, new ChangeTicketStatusRequest(_selectedStatus));
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private async Task AssignAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedAgentId))
+        {
+            _errorMessage = "Please select an agent.";
+            return;
+        }
+
+        await AssignToAsync(_selectedAgentId);
+    }
+
+    private Task AssignToSelfAsync() => AssignToAsync(_currentUserId!);
+
+    private async Task AssignToAsync(string agentId)
+    {
+        _errorMessage = null;
+        try
+        {
+            await Api.AssignTicketAsync(Id, new AssignTicketRequest(agentId));
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+}

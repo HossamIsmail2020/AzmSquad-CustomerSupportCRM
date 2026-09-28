@@ -1,0 +1,176 @@
+@page "/tickets"
+@attribute [Authorize]
+@inject ApiClient Api
+
+<PageTitle>Tickets</PageTitle>
+
+<div class="page-header">
+    <h1>Tickets</h1>
+    <button class="btn btn-primary" @onclick="ToggleCreate">@(_creating ? "Cancel" : "+ New ticket")</button>
+</div>
+
+@if (_errorMessage is not null)
+{
+    <div class="alert alert-danger">@_errorMessage</div>
+}
+
+@if (_creating)
+{
+    <div class="card p-3 mb-4">
+        <h5>New ticket</h5>
+        <EditForm Model="_newTicket" OnValidSubmit="CreateAsync">
+            <DataAnnotationsValidator />
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label">Customer</label>
+                    <InputSelect class="form-select" @bind-Value="_newTicket.CustomerId">
+                        <option value="">Select a customer</option>
+                        @foreach (var customer in _customers)
+                        {
+                            <option value="@customer.Id">@customer.FullName</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Category</label>
+                    <InputSelect class="form-select" @bind-Value="_newTicket.Category">
+                        @foreach (var value in Enum.GetValues<TicketCategory>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Priority</label>
+                    <InputSelect class="form-select" @bind-Value="_newTicket.Priority">
+                        @foreach (var value in Enum.GetValues<TicketPriority>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Subject</label>
+                    <InputText class="form-control" @bind-Value="_newTicket.Subject" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <InputTextArea class="form-control" @bind-Value="_newTicket.Description" />
+                </div>
+            </div>
+            <button class="btn btn-success mt-3" type="submit" disabled="@_saving">Create</button>
+        </EditForm>
+    </div>
+}
+
+@if (_loading)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Subject</th><th>Customer</th><th>Category</th><th>Priority</th><th>Status</th><th>Assigned</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ticket in _tickets)
+            {
+                <tr>
+                    <td>@ticket.Subject</td>
+                    <td>@ticket.CustomerName</td>
+                    <td>@ticket.Category</td>
+                    <td class="priority-@ticket.Priority">@ticket.Priority</td>
+                    <td><span class="badge-status status-@ticket.Status">@ticket.Status</span></td>
+                    <td>@(ticket.AssignedAgentName ?? "Unassigned")</td>
+                    <td><a href="/tickets/@ticket.Id">View</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<TicketDto> _tickets = [];
+    private List<CustomerDto> _customers = [];
+    private bool _loading = true;
+    private bool _saving;
+    private bool _creating;
+    private string? _errorMessage;
+    private NewTicketModel _newTicket = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var ticketsTask = Api.GetTicketsAsync();
+            var customersTask = Api.GetCustomersAsync();
+            await Task.WhenAll(ticketsTask, customersTask);
+            _tickets = ticketsTask.Result.ToList();
+            _customers = customersTask.Result.ToList();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void ToggleCreate()
+    {
+        _creating = !_creating;
+        _newTicket = new NewTicketModel();
+        _errorMessage = null;
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_newTicket.CustomerId is null)
+        {
+            _errorMessage = "Please select a customer.";
+            return;
+        }
+
+        _saving = true;
+        _errorMessage = null;
+        try
+        {
+            await Api.CreateTicketAsync(new CreateTicketRequest(
+                _newTicket.Subject, _newTicket.Description, _newTicket.CustomerId.Value,
+                _newTicket.Category, _newTicket.Priority));
+
+            _creating = false;
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private class NewTicketModel
+    {
+        public Guid? CustomerId { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(200, MinimumLength = 3)]
+        public string Subject { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        public string Description { get; set; } = string.Empty;
+
+        public TicketCategory Category { get; set; } = TicketCategory.General;
+        public TicketPriority Priority { get; set; } = TicketPriority.Medium;
+    }
+}

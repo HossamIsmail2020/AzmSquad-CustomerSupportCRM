@@ -1,0 +1,78 @@
+@page "/"
+@attribute [Authorize]
+@inject ApiClient Api
+
+<PageTitle>Dashboard</PageTitle>
+
+<h1>My Dashboard</h1>
+
+@if (_loading)
+{
+    <p>Loading...</p>
+}
+else if (_dashboard is null)
+{
+    <p class="text-danger">Could not load the dashboard.</p>
+}
+else
+{
+    <p>Welcome, @_dashboard.AgentName. You have @_dashboard.TotalAssigned assigned ticket(s).</p>
+
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        @foreach (var count in _dashboard.CountsByStatus)
+        {
+            <span class="badge-status status-@count.Status">@count.Status: @count.Count</span>
+        }
+    </div>
+
+    <h2>Assigned Tickets</h2>
+    @if (_dashboard.AssignedTickets.Count == 0)
+    {
+        <p class="text-muted">No tickets assigned to you yet.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Customer</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Updated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ticket in _dashboard.AssignedTickets)
+                {
+                    <tr>
+                        <td>@ticket.Subject</td>
+                        <td>@ticket.CustomerName</td>
+                        <td class="priority-@ticket.Priority">@ticket.Priority</td>
+                        <td><span class="badge-status status-@ticket.Status">@ticket.Status</span></td>
+                        <td>@ticket.UpdatedAt.ToLocalTime().ToString("g")</td>
+                        <td><a href="/tickets/@ticket.Id">View</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private AgentDashboardDto? _dashboard;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _dashboard = await Api.GetMyDashboardAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}
